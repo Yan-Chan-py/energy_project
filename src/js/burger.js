@@ -25,8 +25,6 @@ Burger.classList.add("visually-hidden");
 
 document.body.classList.remove("disable-scroll");
 }
-//
-// BurgerButton.addEventListener("click", openMenu)
-// BurgerCloseButton.addEventListener("click", closeMenu)
+
 document.addEventListener("keydown", closeEscape)
 

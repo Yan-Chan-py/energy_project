@@ -1,6 +1,4 @@
-// import { FieldPath, doc, updateDoc } from "firebase/firestore";
 import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
-// import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from '../../../firebase';
 
 export const updateFirestore = async card => {
@@ -39,10 +37,8 @@ export const listOfFavorites = async () => {
   if (!user) return;
 
   const querySnapshot = await getDocs(collection(db, user));
-  // const querySnapshot = getDocs(collection(db, user.email));
 
   querySnapshot.forEach(doc => {
-    // doc.data() is never undefined for query doc snapshots
 
     favorites.push(doc.data());
   });

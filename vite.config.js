@@ -9,6 +9,7 @@ export default defineConfig(({ command }) => {
       [command === 'serve' ? 'global' : '_global']: {},
     },
     root: 'src',
+    envDir: '../',
     headers: [
       {
         "key": "Cross-Origin-Embedder-Policy",

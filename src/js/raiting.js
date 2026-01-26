@@ -28,7 +28,6 @@ export function createInteractiveRating() {
     function setRating(selectedRating) {
         ratingContainer.setAttribute('data-rating', selectedRating);
 
-        // Закрасити обрану та всі попередні зірки
         stars.forEach((star, index) => {
             if (index + 1 <= selectedRating) {
                 star.classList.add('selected');
