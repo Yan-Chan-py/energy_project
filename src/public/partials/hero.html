@@ -3,61 +3,52 @@
     <div class="header-hero-wrapper">
       <h1 class="hero-header">
         <svg class="sun-icon-img" width="38" height="38" aria-label="sun-icon">
-          <use data-icon="icon-sun"></use>
+          <use data-href="./img/svg/sprite.svg#icon-sun"></use>
         </svg>
-        Get <span class="accent-header">Body&nbsp;</span> in <br>
+        Get <span class="accent-header">Body&nbsp;</span> in <br />
         shape, Stay healthy
       </h1>
     </div>
-
     <p class="hero-quote">
       Transform your physique and embrace a healthier lifestyle with our comprehensive fitness and
       nutrition support.
     </p>
-
     <picture>
       <source
-        media="(max-width: 767px)"
-        data-srcset="hero-img/hero-mobile.webp 1x, hero-img/hero-mobile@2x.webp 2x"
+        media="(max-width: 767px)" data-srcset="./img/hero-img/hero-mobile.webp 1x, ./img/hero-img/hero-mobile@2x.webp 2x"
         type="image/webp"
-      >
+      />
       <source
-        media="(min-width: 768px) and (max-width: 1440px)"
-        data-srcset="hero-img/hero-tablet.webp 1x, hero-img/hero-tablet@2x.webp 2x"
+        media="(min-width: 768px) and (max-width: 1440px)" data-srcset="./img/hero-img/hero-tablet.webp 1x, ./img/hero-img/hero-tablet@2x.webp 2x"
         type="image/webp"
-      >
+      />
       <source
-        media="(min-width: 1440px)"
-        data-srcset="hero-img/hero-desctop.webp 1x, hero-img/hero-desctop@2x.webp 2x"
+        media="(min-width: 1440px)" data-srcset="./img/hero-img/hero-desctop.webp 1x, ./img/hero-img/hero-desctop@2x.webp 2x"
         type="image/webp"
-      >
-
+      />
+      <!-- Якщо браузер не підтримуе елемент picture -->
       <img
         loading="lazy"
         class="hero-img"
-        data-src="hero-img/hero-desctop.png"
-        data-srcset="hero-img/hero-desctop@2x.png 2x"
-        alt="two-women-are-doing-sports"
-      >
+        src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="./img/hero-img/hero-desctop.png" data-srcset="./img/hero-img/hero-desctop@2x.png 2x"
+        alt="two-womуn-are-doing-sports"
+      />
     </picture>
-
     <div class="tag-container">
       <picture>
         <source
-          media="(min-width: 1440px)"
-          data-srcset="hero-img/decoration-img.webp 1x, hero-img/decoration-img@2x.webp 2x"
+          media="(min-width: 1440px)" data-srcset="./img/hero-img/decoration-img.webp 1x, ./img/hero-img/decoration-img@2x.webp 2x"
           type="image/webp"
-        >
+        />
+        <!-- Якщо браузер не підтримуе елемент picture -->
         <img
           loading="lazy"
           class="decration-img"
-          data-src="hero-img/decoration-img.png"
-          data-srcset="hero-img/decoration-img@2x.png 2x"
+          src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="./img/hero-img/decoration-img.png" data-srcset="./img/hero-img/decoration-img@2x.png 2x"
           alt="food-friends"
           width="168"
-        >
+        />
       </picture>
-
       <ul class="list tag-list">
         <li class="list-item tag-item">#Sport</li>
         <li class="list-item tag-item">#Healthy</li>

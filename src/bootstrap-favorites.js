@@ -1,9 +1,8 @@
-import { includePartials } from './includePartials.js';
-import { applyAssets } from './js/applyAssets.js';
+import { includePartials } from './includePartials';
+import { applyAssetUrls } from './js/applyAssets';
 
-includePartials()
-  .then(() => {
-    applyAssets();
-    return import('./favorites.js');
-  })
-  .catch(err => console.error('bootstrap-favorites error:', err));
+(async () => {
+  await includePartials();
+  applyAssetUrls();
+  await import('./main.js'); // або що там у тебе стартує логіку
+})();
