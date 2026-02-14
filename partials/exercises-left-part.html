@@ -2,7 +2,7 @@
   <div class="quote">
     <span class="quote-icon">
       <svg class="quote-icon-img" width="20" height="20" aria-label="running-man-icon">
-        <use href="./img/svg/sprite.svg#icon-run-man"></use>
+        <use data-href="./img/svg/sprite.svg#icon-run-man"></use>
       </svg>
     </span>
     <div class="quote-wrapper">
@@ -10,7 +10,7 @@
         Quote of the day
         <span class="icon-quote">
           <svg class="icon-quote-img" width="20" height="20" aria-label="quote-icon">
-            <use href="./img/svg/sprite.svg#icon-inverted-commas"></use>
+            <use data-href="./img/svg/sprite.svg#icon-inverted-commas"></use>
           </svg>
         </span>
       </h3>
@@ -22,24 +22,21 @@
   <div class="exercise-img">
     <picture>
       <source
-        media="(max-width: 767px)"
-        srcset="
+        media="(max-width: 767px)" data-srcset="
           ./img/quote-img/home/quote-img-mobile.webp    1x,
           ./img/quote-img/home/quote-img-mobile@2x.webp 2x
         "
         type="image/webp"
       />
       <source
-        media="(min-width: 768px) and (max-width: 1439px)"
-        srcset="
+        media="(min-width: 768px) and (max-width: 1439px)" data-srcset="
           ./img/quote-img/home/quote-img-tablet.webp    1x,
           ./img/quote-img/home/quote-img-tablet@2x.webp 2x
         "
         type="image/webp"
       />
       <source
-        media="(min-width: 1440px)"
-        srcset="
+        media="(min-width: 1440px)" data-srcset="
           ./img/quote-img/home/quote-img-desctop.webp    1x,
           ./img/quote-img/home/quote-img-desctop@2x.webp 2x
         "
@@ -48,9 +45,8 @@
       <!-- Якщо браузер не підтримуе елемент picture -->
       <img
         loading="lazy"
-        class="img-exe"
-        srcset="./img/exercises-img/women-sports@2x.jpg 2x"
-        src="./img/exercises-img/women-sports.jpg"
+        class="img-exe" data-srcset="./img/exercises-img/women-sports@2x.jpg 2x"
+        src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="./img/exercises-img/women-sports.jpg"
         alt="Women talking break"
       />
     </picture>
@@ -59,7 +55,7 @@
   <div class="daily">
     <span class="daily-icon">
       <svg class="daily-icon-img" width="20" height="20" aria-label="dumbbell-icon">
-        <use href="./img/svg/sprite.svg#icon-dumbbell"></use>
+        <use data-href="./img/svg/sprite.svg#icon-dumbbell"></use>
       </svg>
     </span>
     <div class="daily-wrapper">
