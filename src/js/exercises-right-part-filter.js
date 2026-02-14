@@ -83,38 +83,70 @@ async function addFavoriteHandler(e) {
   }
 }
 
-function getStartHandler({ target }) {
-  if (validNodeNames.includes(target.nodeName) && target.classList[0] !== 'favourites_btn_trash_icon' && target.classList[0] !== 'favourites_btn_workout') {
-    id = target.dataset.id;
-    return (oneCard(id));
-  } else if (target.classList[0] === 'favourites_btn_trash_icon') {
-    const cardId = target.dataset.id;
-    deleteLocalFavorites(cardId);
-    addContent()
-  }
-}
+function getStartHandler(e) {
+  const target = e.target;
 
+  // 1) Видалення з фаворитів (іконка корзини)
+  if (target.classList.contains('favourites_btn_trash_icon')) {
+    const cardId = target.dataset.id || target.closest('[data-id]')?.dataset?.id;
+    if (!cardId) return;
+    deleteLocalFavorites(cardId);
+    addContent();
+    return;
+  }
+
+  // 2) Відкриття модалки по Start/іконках всередині
+  // Беремо id з найближчого елемента, де він справді є
+  const elWithId = target.closest('[data-id]');
+  const id = elWithId?.dataset?.id;
+
+  // Якщо id нема — нічого не робимо (це і прибирає /undefined)
+  if (!id) return;
+
+  // Якщо це кнопка workout (у тебе така перевірка була) — не відкривати
+  if (target.classList.contains('favourites_btn_workout')) return;
+
+  oneCard(id);
+}
 listExercises.addEventListener('click', getStartHandler);
 
-const oneCard = async id => {
+const oneCard = async (id) => {
+  if (!id) return;
+
+  let data;
+  try {
     loader.open();
-    let data = await fetchSportEnergy.getOneExercises(id);
-    loader.close()
-  const favoriteData = localStorage.getItem('favorites');
-  if (favoriteData !== null) {
-    const favoriteObject = JSON.parse(favoriteData);
-    const objectLocal = favoriteObject.find(({ _id }) => _id === id);
-    if (objectLocal) {
-      data.favorite = true;
-    } else {
-      data.favorite = false;
-    }
-  } else {
-    data.favorite = false;
+    data = await fetchSportEnergy.getOneExercises(id);
+  } catch (err) {
+    message.error(err?.message || String(err));
+    return;
+  } finally {
+    loader.close();
   }
+
+  // якщо API повернуло нічого — не падаємо
+  if (!data) {
+    message.error('Exercise not found or request failed');
+    return;
+  }
+
+  // безпечне читання localStorage favorites
+  let isFav = false;
+  try {
+    const favoriteData = localStorage.getItem('favorites');
+    const favoriteObject = favoriteData ? JSON.parse(favoriteData) : [];
+    isFav = Array.isArray(favoriteObject) && favoriteObject.some(item => item?._id === id);
+  } catch {
+    isFav = false;
+  }
+
+  data.favorite = isFav;
+
   myModal.open(getExerciseModal(data));
+
   addFavoriteButton = document.querySelector('.refresh-button-js');
   addRatingButton = document.querySelector('.add-rating');
-  addRatingButton.addEventListener('click', getRatingHandler);
-  addFavoriteButton.addEventListener('click', addFavoriteHandler);
+
+  if (addRatingButton) addRatingButton.addEventListener('click', getRatingHandler);
+  if (addFavoriteButton) addFavoriteButton.addEventListener('click', addFavoriteHandler);
 };

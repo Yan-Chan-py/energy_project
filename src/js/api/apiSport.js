@@ -10,11 +10,23 @@ class ApiSportEnergy {
             }
         };
     }
+static async fetchJson(url, options) {
+  const response = await fetch(url, options);
 
-    static async fetchJson(url, options) {
-        const response = await fetch(url, options);
-        return response.json();
-    }
+  // Якщо CORS/мережа — сюди може навіть не дійти, тоді fetch кине помилку
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`HTTP ${response.status} ${response.statusText} | ${url} | ${text.slice(0, 200)}`);
+  }
+
+  // не всі відповіді можуть бути JSON (напр. порожня)
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+  return response.text();
+}
+
 
     async getQuotes() {
         const wrappedMethod = ApiSportEnergy.handleErrors(async () => {
