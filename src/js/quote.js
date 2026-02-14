@@ -1,47 +1,67 @@
 import fetchSportEnergy from './api/apiSport';
 import { loader } from './loader/loader';
 
-const refs = {
-  quoteText: document.querySelector('.quote-text'),
-  quoteAuthor: document.querySelector('.quote-author'),
-};
-
-document.addEventListener('DOMContentLoaded', loadQuote);
+function getRefs() {
+  return {
+    quoteText: document.querySelector('.quote-text'),
+    quoteAuthor: document.querySelector('.quote-author'),
+  };
+}
 
 export async function loadQuote() {
-  const locStorage = localStorage.getItem('quote');
+  const { quoteText, quoteAuthor } = getRefs();
 
-  if (locStorage) {
-    const currentDate = new Date().toDateString();
+  // Якщо блоку цитати нема на цій сторінці — просто виходимо
+  if (!quoteText || !quoteAuthor) return;
 
-    const { date: localStorageDate, quote: localStorageQuote, author: localStorageAuthor } = JSON.parse(locStorage);
+  const storageRaw = localStorage.getItem('quote');
+  const today = new Date().toDateString();
 
-    if (currentDate !== localStorageDate) {
-      fetchQuote();
-    } else {
-      refs.quoteText.innerHTML = localStorageQuote;
-      refs.quoteAuthor.innerHTML = localStorageAuthor
+  // 1) Якщо є кеш на сьогодні — показуємо з кешу
+  if (storageRaw) {
+    try {
+      const parsed = JSON.parse(storageRaw);
+      if (parsed?.date === today && parsed?.quote) {
+        quoteText.textContent = parsed.quote ?? '';
+        quoteAuthor.textContent = parsed.author ?? '';
+        return;
+      }
+    } catch (_) {
+      // якщо storage зламаний — просто перезапишемо нижче
     }
-  } else {
-    fetchQuote();
+  }
+
+  // 2) Інакше — тягнемо з API
+  await fetchAndRenderQuote(quoteText, quoteAuthor);
+}
+
+async function fetchAndRenderQuote(quoteText, quoteAuthor) {
+  try {
+    loader.open();
+    const res = await fetchSportEnergy.getQuotes();
+    if (!res) return;
+
+    const { author, quote } = res;
+
+    localStorage.setItem(
+      'quote',
+      JSON.stringify({
+        author: author ?? '',
+        quote: quote ?? '',
+        date: new Date().toDateString(),
+      })
+    );
+
+    quoteText.textContent = quote ?? '';
+    quoteAuthor.textContent = author ?? '';
+  } finally {
+    loader.close();
   }
 }
 
-async function fetchQuote() {
-    loader.open();
-    const fetchQuote = await fetchSportEnergy.getQuotes();
-    loader.close()
-
-  const { author, quote } = fetchQuote;
-
-  const quoteObj = {
-    author,
-    quote,
-    date: new Date().toDateString(),
-  };
-
-  localStorage.setItem('quote', JSON.stringify(quoteObj));
-
-  refs.quoteText.innerHTML = quote;
-  refs.quoteAuthor.innerHTML = author;
+// ✅ Важливо для твого випадку з dynamic import після includePartials:
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadQuote, { once: true });
+} else {
+  loadQuote();
 }
