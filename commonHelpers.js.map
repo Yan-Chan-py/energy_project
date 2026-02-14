@@ -1,1 +1,1 @@
-{"version":3,"file":"commonHelpers.js","sources":[],"sourcesContent":[],"names":[],"mappings":""}
+{"version":3,"file":"commonHelpers.js","sources":["../src/bootstrap-favorites.js"],"sourcesContent":["import { includePartials } from './includePartials.js';\n\nincludePartials()\n  .then(() => import('./favorites.js'))\n  .catch(err => console.error('bootstrap-favorites error:', err));\n"],"names":["includePartials","__vitePreload","err"],"mappings":"gEAEAA,EAAiB,EACd,KAAK,IAAKC,EAAA,IAAC,OAAO,qDAAiB,EACnC,MAAMC,GAAO,QAAQ,MAAM,6BAA8BA,CAAG,CAAC"}
