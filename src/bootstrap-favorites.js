@@ -1,8 +1,9 @@
-import { includePartials } from './includePartials';
-import { applyAssetUrls } from './js/applyAssets';
+// src/bootstrap-favorites.js
+import { includePartials } from './includePartials.js';
+import { applyAssetUrls } from './js/applyAssets.js';
+import './favorites.js'; // або './main.js' якщо так треба саме тобі
 
 (async () => {
   await includePartials();
   applyAssetUrls();
-  await import('./main.js'); // або що там у тебе стартує логіку
 })();

@@ -1,75 +1,49 @@
 // src/js/assetResolver.js
-// Resolves asset URLs for runtime-injected HTML (partials) on Vite/GH Pages
+const assets = import.meta.glob('../img/**/*', { as: 'url', eager: true });
 
-const BASE_URL = import.meta.env.BASE_URL || '/';
+// key: "img/..."  value: "/energy_project/assets/...."
+const urlMap = new Map(
+  Object.entries(assets).map(([k, v]) => [k.replace('../', ''), v])
+);
 
-// IMPORTANT: images live in src/img, while this file is in src/js
-// so we must glob "../img", not "./img"
-const modules = import.meta.glob('../img/**/*.*', { as: 'url', eager: true });
+const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 
-const assetMap = new Map();
-
-function normalizeKey(key) {
-  // examples of key: "../img/svg/sprite.svg"
-  // make it "img/svg/sprite.svg"
-  return key.replace(/^(\.\/|\.\.\/)+/, '');
+function stripBase(p) {
+  const base = import.meta.env.BASE_URL || '/';
+  return p.startsWith(base) ? p.slice(base.length) : p;
 }
 
-for (const [key, url] of Object.entries(modules)) {
-  const normalized = normalizeKey(key); // "img/...."
-  assetMap.set(normalized, url);
+function normalizeToKey(inputPath) {
+  if (!inputPath) return null;
 
-  // allow common variants:
-  assetMap.set('/' + normalized, url);
-  assetMap.set('./' + normalized, url);
-}
+  let p = String(inputPath).trim();
+  if (!p) return null;
 
-function stripOrigin(u) {
-  try {
-    const url = new URL(u, window.location.href);
-    return url.pathname + url.search + url.hash;
-  } catch {
-    return u;
-  }
-}
+  if (p.startsWith('data:')) return null;
+  if (SCHEME_RE.test(p) && !p.startsWith('http:') && !p.startsWith('https:')) return null;
 
-function stripBase(u) {
-  // remove base prefix like "/energy_project/"
-  const raw = u.startsWith('http') ? stripOrigin(u) : u;
-  if (BASE_URL !== '/' && raw.startsWith(BASE_URL)) {
-    return raw.slice(BASE_URL.length);
-  }
-  return raw;
-}
+  // already-built
+  if (p.includes('/assets/') || p.includes('/energy_project/assets/')) return null;
 
-function splitHash(u) {
-  const idx = u.indexOf('#');
-  if (idx === -1) return { path: u, hash: '' };
-  return { path: u.slice(0, idx), hash: u.slice(idx) };
-}
+  const hashIdx = p.indexOf('#');
+  if (hashIdx >= 0) p = p.slice(0, hashIdx);
 
-export function assetUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+  p = stripBase(p);
 
-  const trimmed = rawUrl.trim();
-  // ignore absolute external urls/data/mailto/tel
-  if (/^(data:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  if (p.startsWith('./')) p = p.slice(2);
+  if (p.startsWith('/')) p = p.slice(1);
 
-  const { path, hash } = splitHash(trimmed);
-
-  // Turn "/energy_project/img/..", "./img/..", "/img/.." -> "img/.."
-  let key = stripBase(path);
-  key = key.replace(/^\/+/, '');      // remove leading "/"
-  key = key.replace(/^(\.\/)+/, '');  // remove leading "./"
-
-  // Try match
-  const resolved = assetMap.get(key) || assetMap.get('/' + key) || assetMap.get('./' + key);
-
-  if (!resolved) {
-    // keep original – but warn so you can see which path is missing
-    console.warn('[assetUrl] Not found:', rawUrl, '-> key:', key);
-    return rawUrl;
+  if (!p.startsWith('img/')) {
+    const idx = p.indexOf('img/');
+    if (idx >= 0) p = p.slice(idx);
+    else return null;
   }
 
-  return resolved + hash;
+  return p;
+}
+
+export function assetUrl(inputPath) {
+  const key = normalizeToKey(inputPath);
+  if (!key) return null;
+  return urlMap.get(key) || null;
 }

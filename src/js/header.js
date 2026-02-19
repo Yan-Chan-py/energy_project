@@ -1,30 +1,37 @@
-import { addContent } from '../js/favorite/favorite'
+// src/js/header.js
 
-const Home = document.getElementById("home")
-const Favorites = document.getElementById("favorites")
-const TextHome = document.getElementById("home-text")
-const TextFavorite = document.getElementById("favorites-text")
-const Nav = document.getElementById("navigation")
-const currentUrl = window.location.href.toString();
+function setActiveNav() {
+  // header може ще не бути в DOM, якщо partials ще не завантажились
+  const header = document.querySelector('#header');
+  if (!header) return;
 
-let part = currentUrl.slice(-14)
+  const homeLink = header.querySelector('#home');
+  const favLink = header.querySelector('#favorites');
 
-export const onClickPage = () => {
+  // якщо цих елементів немає на сторінці / в partial — просто нічого не робимо
+  if (!homeLink || !favLink) return;
 
-   if (part === "favorites.html") {
-      Home.classList.remove("active");
-      TextHome.classList.remove("black");
-      Favorites.classList.add("active");
-      TextFavorite.classList.add("black");
+  const path = window.location.pathname;
+  const isFavorites = path.endsWith('favorites.html');
 
-      addContent()
-   } else {
-      Home.classList.add("active");
-      TextHome.classList.add("black");
-      Favorites.classList.remove("active");
-      TextFavorite.classList.remove("black");
- }
+  homeLink.classList.toggle('active', !isFavorites);
+  favLink.classList.toggle('active', isFavorites);
 
+  // (опційно) якщо в тебе є span з текстом і ти міняєш класи — роби так само через перевірки
+  const homeText = header.querySelector('#home-text');
+  const favText = header.querySelector('#favorites-text');
 
+  if (homeText) homeText.classList.toggle('black', !isFavorites);
+  if (favText) favText.classList.toggle('black', isFavorites);
 }
-onClickPage(part)
+
+// 1) пробуємо при старті
+window.addEventListener('DOMContentLoaded', setActiveNav);
+
+// 2) пробуємо ще раз після того як partials точно вставились
+window.addEventListener('partials:loaded', setActiveNav);
+
+// 3) і на випадок навігації/переходів
+window.addEventListener('popstate', setActiveNav);
+
+export { setActiveNav };

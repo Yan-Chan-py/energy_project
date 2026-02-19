@@ -1,191 +1,188 @@
-import { assetUrl } from './assetResolver';
+// src/js/applyAssets.js
+import { assetUrl } from './assetResolver.js';
 
 /**
- * Applies correct built URLs to assets in HTML (src/srcset/href/poster + SVG <use>).
- * Also watches DOM for dynamically injected markup (so icons/images added later won't 404).
+ * Vite не переписує кастомні атрибути (data-src, data-href, ...)
+ * у partials. Тому після вставки partials ми:
+ * - перетворюємо data-src/data-srcset -> src/srcset
+ * - перетворюємо use[data-href] -> use[href]
+ *
+ * Важливо: НЕ чіпаємо <a href="...">, <script src="...">,
+ * і НЕ чіпаємо вже зібрані /assets/* урли.
  */
 
-const MISSING_ONCE = new Set();
+const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 
-function warnOnce(msg) {
-  if (MISSING_ONCE.has(msg)) return;
-  MISSING_ONCE.add(msg);
-  console.warn(msg);
+function isAlreadyBuilt(url) {
+  return (
+    url.includes('/assets/') ||
+    url.includes('\\assets\\') ||
+    url.includes('/energy_project/assets/')
+  );
 }
 
-function normalizeUrlValue(raw) {
-  if (typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  return trimmed;
+function isSpecialScheme(url) {
+  // data:, blob:, chrome-extension:, file:, etc.
+  return SCHEME_RE.test(url) && !url.startsWith('http:') && !url.startsWith('https:');
 }
 
-function resolveWithHash(raw) {
-  const v = normalizeUrlValue(raw);
-  if (!v) return null;
+function looksLikeSourceAsset(url) {
+  if (!url) return false;
+  if (isAlreadyBuilt(url)) return false;
 
-  // keep external/data/fragment-only refs as-is
-  if (v.startsWith('http') || v.startsWith('data:') || v.startsWith('#')) return v;
-
-  // Preserve hash fragment (e.g. sprite.svg#icon-search)
-  const [basePart, hashPart] = v.split('#');
-  const resolvedBase = assetUrl(basePart);
-
-  if (!resolvedBase) {
-    warnOnce(`[assetUrl] Not found: ${v}`);
-    return null;
-  }
-
-  return hashPart ? `${resolvedBase}#${hashPart}` : resolvedBase;
+  return (
+    url.includes('/img/') ||
+    url.includes('\\img\\') ||
+    url.startsWith('img/') ||
+    url.startsWith('./img/') ||
+    url.startsWith('../img/') ||
+    url.startsWith('/img/')
+  );
 }
 
-function resolveSrcset(raw) {
-  const v = normalizeUrlValue(raw);
-  if (!v) return null;
+function resolveOne(raw) {
+  if (!raw) return raw;
 
-  // Example: "img1.webp 1x, img2.webp 2x"
-  const parts = v.split(',').map(s => s.trim()).filter(Boolean);
+  const s = String(raw).trim();
+  if (!s) return s;
 
-  const resolvedParts = parts.map(part => {
-    // part = "path 2x" or "path 480w"
-    const tokens = part.split(/\s+/);
-    const pathToken = tokens[0];
-    const descriptor = tokens.slice(1).join(' ');
+  if (s.startsWith('#') || s.startsWith('data:')) return s;
+  if (isSpecialScheme(s)) return s;
 
-    const resolvedPath = resolveWithHash(pathToken);
-    if (!resolvedPath) return part; // keep original if not resolvable
+  if (isAlreadyBuilt(s)) return s;
+  if (s.endsWith('.js') || s.endsWith('.css') || s.endsWith('.html')) return s;
 
-    return descriptor ? `${resolvedPath} ${descriptor}` : resolvedPath;
-  });
+  if (!looksLikeSourceAsset(s)) return s;
 
-  return resolvedParts.join(', ');
+  const hashIdx = s.indexOf('#');
+  const base = hashIdx >= 0 ? s.slice(0, hashIdx) : s;
+  const frag = hashIdx >= 0 ? s.slice(hashIdx) : '';
+
+  const resolved = assetUrl(base);
+  return resolved ? `${resolved}${frag}` : s;
 }
 
-function setAttr(el, attr, value) {
-  if (!value) return false;
+function resolveSrcset(rawSrcset) {
+  const raw = String(rawSrcset || '').trim();
+  if (!raw) return raw;
 
-  // Special handling for SVG <use>
-  const isUse = el.tagName && el.tagName.toLowerCase() === 'use';
-  if (isUse && (attr === 'href' || attr === 'xlink:href')) {
-    el.setAttribute('href', value);
-    el.setAttribute('xlink:href', value);
-    return true;
-  }
-
-  el.setAttribute(attr, value);
-  return true;
+  return raw
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const tokens = part.split(/\s+/);
+      const url = tokens.shift();
+      const descr = tokens.join(' ');
+      const resolvedUrl = resolveOne(url);
+      return descr ? `${resolvedUrl} ${descr}` : resolvedUrl;
+    })
+    .join(', ');
 }
 
-function patchElement(el) {
-  if (!(el instanceof Element)) return;
-
-  // data-* first
-  if (el.hasAttribute('data-src')) {
-    const resolved = resolveWithHash(el.getAttribute('data-src'));
-    if (resolved) {
-      el.setAttribute('src', resolved);
-      el.removeAttribute('data-src');
-    }
-  }
-
-  if (el.hasAttribute('data-srcset')) {
-    const resolved = resolveSrcset(el.getAttribute('data-srcset'));
-    if (resolved) {
-      el.setAttribute('srcset', resolved);
-      el.removeAttribute('data-srcset');
-    }
-  }
-
-  if (el.hasAttribute('data-href')) {
-    const resolved = resolveWithHash(el.getAttribute('data-href'));
-    if (resolved) {
-      // for <use> set both href & xlink:href
-      if (el.tagName && el.tagName.toLowerCase() === 'use') {
-        setAttr(el, 'href', resolved);
-        setAttr(el, 'xlink:href', resolved);
-      } else {
-        el.setAttribute('href', resolved);
-      }
-      el.removeAttribute('data-href');
-    }
-  }
-
-  // direct attrs (in case some markup still uses href/src directly)
-  if (el.hasAttribute('src')) {
-    const resolved = resolveWithHash(el.getAttribute('src'));
-    if (resolved) el.setAttribute('src', resolved);
-  }
-
-  if (el.hasAttribute('poster')) {
-    const resolved = resolveWithHash(el.getAttribute('poster'));
-    if (resolved) el.setAttribute('poster', resolved);
-  }
-
-  if (el.hasAttribute('href')) {
-    const resolved = resolveWithHash(el.getAttribute('href'));
-    if (resolved) setAttr(el, 'href', resolved);
-  }
-
-  if (el.hasAttribute('xlink:href')) {
-    const resolved = resolveWithHash(el.getAttribute('xlink:href'));
-    if (resolved) setAttr(el, 'xlink:href', resolved);
-  }
-
-  if (el.hasAttribute('srcset')) {
-    const resolved = resolveSrcset(el.getAttribute('srcset'));
-    if (resolved) el.setAttribute('srcset', resolved);
-  }
+function setAttrIfResolved(el, attr, raw) {
+  const resolved = resolveOne(raw);
+  if (resolved && resolved !== raw) el.setAttribute(attr, resolved);
+  else if (resolved && !el.getAttribute(attr)) el.setAttribute(attr, resolved);
 }
 
-function patchTree(root) {
+function patchRoot(root) {
   if (!root) return;
 
-  // patch root itself
-  if (root instanceof Element) patchElement(root);
+  // addedNodes можуть бути Text/Comment -> без querySelectorAll
+  const canQuery = typeof root.querySelectorAll === 'function';
+  const q = sel => (canQuery ? Array.from(root.querySelectorAll(sel)) : []);
 
-  // patch descendants
-  const nodes = root.querySelectorAll(
-    '[data-src],[data-srcset],[data-href],[src],[srcset],[href],[xlink\\:href],[poster]'
-  );
-  nodes.forEach(patchElement);
+  // data-src/data-srcset (картинки)
+  q('img[data-src]').forEach(img => setAttrIfResolved(img, 'src', img.getAttribute('data-src')));
+
+  q('img[data-srcset]').forEach(img => {
+    const v = img.getAttribute('data-srcset');
+    const resolved = resolveSrcset(v);
+    if (resolved && resolved !== v) img.setAttribute('srcset', resolved);
+  });
+
+  q('source[data-src]').forEach(src => setAttrIfResolved(src, 'src', src.getAttribute('data-src')));
+
+  q('source[data-srcset]').forEach(src => {
+    const v = src.getAttribute('data-srcset');
+    const resolved = resolveSrcset(v);
+    if (resolved && resolved !== v) src.setAttribute('srcset', resolved);
+  });
+
+  // Якщо десь лишились прямі img/src з /img/...
+  q('img[src]').forEach(img => {
+    const raw = img.getAttribute('src');
+    if (looksLikeSourceAsset(raw)) setAttrIfResolved(img, 'src', raw);
+  });
+
+  q('source[src]').forEach(src => {
+    const raw = src.getAttribute('src');
+    if (looksLikeSourceAsset(raw)) setAttrIfResolved(src, 'src', raw);
+  });
+
+  q('img[srcset]').forEach(img => {
+    const raw = img.getAttribute('srcset');
+    if (raw && looksLikeSourceAsset(raw)) {
+      const resolved = resolveSrcset(raw);
+      if (resolved && resolved !== raw) img.setAttribute('srcset', resolved);
+    }
+  });
+
+  q('source[srcset]').forEach(src => {
+    const raw = src.getAttribute('srcset');
+    if (raw && looksLikeSourceAsset(raw)) {
+      const resolved = resolveSrcset(raw);
+      if (resolved && resolved !== raw) src.setAttribute('srcset', resolved);
+    }
+  });
+
+  // SVG sprite: <use data-href="...#icon-...">
+  q('use[data-href]').forEach(useEl => {
+    const raw = useEl.getAttribute('data-href');
+    if (!raw) return;
+    setAttrIfResolved(useEl, 'href', raw);
+    setAttrIfResolved(useEl, 'xlink:href', raw);
+  });
+
+  // Якщо десь ще є href/xlink:href на /img/...
+  q('use[href]').forEach(useEl => {
+    const raw = useEl.getAttribute('href');
+    if (looksLikeSourceAsset(raw)) setAttrIfResolved(useEl, 'href', raw);
+  });
+
+  q('use[xlink\\:href]').forEach(useEl => {
+    const raw = useEl.getAttribute('xlink:href');
+    if (looksLikeSourceAsset(raw)) setAttrIfResolved(useEl, 'xlink:href', raw);
+  });
 }
 
-let OBSERVER_STARTED = false;
+let observerStarted = false;
 
+function startObserver() {
+  if (observerStarted) return;
+  observerStarted = true;
+
+  const target = document.body || document.documentElement;
+  if (!target) return;
+
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      m.addedNodes.forEach(node => {
+        if (node && typeof node.querySelectorAll === 'function') patchRoot(node);
+      });
+    }
+  });
+
+  obs.observe(target, { childList: true, subtree: true });
+}
+
+export function applyAssets(root = document) {
+  patchRoot(root);
+  if (root === document) startObserver();
+}
+
+// backward-compatible name (твої файли так імпортують)
 export function applyAssetUrls(root = document) {
-  patchTree(root);
-
-  // Watch for dynamically inserted markup (cards/partials/modals etc)
-  if (!OBSERVER_STARTED && typeof MutationObserver !== 'undefined') {
-    OBSERVER_STARTED = true;
-
-    const obs = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        if (m.type === 'attributes') {
-          patchElement(m.target);
-        } else if (m.type === 'childList') {
-          m.addedNodes.forEach(node => patchTree(node));
-        }
-      }
-    });
-
-    obs.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: [
-        'data-src',
-        'data-srcset',
-        'data-href',
-        'src',
-        'srcset',
-        'href',
-        'xlink:href',
-        'poster',
-      ],
-    });
-  }
+  applyAssets(root);
 }
-
-// Backward-compatible alias (if somewhere you import applyAssets)
-export const applyAssets = applyAssetUrls;
